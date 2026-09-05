@@ -1,0 +1,444 @@
+--==================================================
+-- TDAT K14 - VNG
+-- Rayfield + ESP + Player Debug
+-- Dùng trong Roblox Studio / game của bạn
+--==================================================
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+
+local LocalPlayer = Players.LocalPlayer
+
+--==================================================
+-- RAYFIELD
+--==================================================
+
+local Rayfield = loadstring(game:HttpGet(
+    "https://sirius.menu/gen2"
+))()
+
+local Window = Rayfield:CreateWindow({
+    name = "TDAT K14 - VNG",
+    subtitle = "Developer / Debug Menu"
+})
+
+--==================================================
+-- VARIABLES
+--==================================================
+
+local ESPEnabled = false
+local ShowName = true
+local ShowHealth = true
+local InfiniteJump = false
+
+local WalkSpeed = 16
+local JumpPower = 50
+
+local TargetPart = "Head"
+local FOV = 150
+
+local Highlights = {}
+
+--==================================================
+-- CHARACTER
+--==================================================
+
+local function getCharacter()
+    return LocalPlayer.Character
+end
+
+local function getHumanoid()
+    local character = getCharacter()
+    if not character then
+        return nil
+    end
+
+    return character:FindFirstChildOfClass("Humanoid")
+end
+
+local function applyMovement()
+    local humanoid = getHumanoid()
+
+    if humanoid then
+        humanoid.WalkSpeed = WalkSpeed
+        humanoid.JumpPower = JumpPower
+    end
+end
+
+--==================================================
+-- ESP
+--==================================================
+
+local function removeESP(player)
+    if Highlights[player] then
+        Highlights[player]:Destroy()
+        Highlights[player] = nil
+    end
+end
+
+local function createESP(player)
+    if player == LocalPlayer then
+        return
+    end
+
+    removeESP(player)
+
+    local character = player.Character
+    if not character then
+        return
+    end
+
+    if not ESPEnabled then
+        return
+    end
+
+    local highlight = Instance.new("Highlight")
+    highlight.Name = "TDAT_ESP"
+    highlight.Adornee = character
+    highlight.FillTransparency = 0.75
+    highlight.OutlineTransparency = 0
+
+    highlight.Parent = character
+
+    Highlights[player] = highlight
+end
+
+local function refreshESP()
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer then
+            createESP(player)
+        end
+    end
+end
+
+local function clearESP()
+    for player, highlight in pairs(Highlights) do
+        if highlight then
+            highlight:Destroy()
+        end
+
+        Highlights[player] = nil
+    end
+end
+
+Players.PlayerAdded:Connect(function(player)
+    player.CharacterAdded:Connect(function()
+        task.wait(0.5)
+
+        if ESPEnabled then
+            createESP(player)
+        end
+    end)
+end)
+
+Players.PlayerRemoving:Connect(function(player)
+    removeESP(player)
+end)
+
+--==================================================
+-- PLAYER TAB
+--==================================================
+
+local PlayerTab = Window:CreateTab({
+    name = "PLAYER"
+})
+
+PlayerTab:CreateSlider({
+    name = "WalkSpeed",
+    range = {16, 100},
+    increment = 1,
+    suffix = " Speed",
+    flag = "WalkSpeed",
+    default = 16,
+
+    callback = function(value)
+        WalkSpeed = value
+        applyMovement()
+    end
+})
+
+PlayerTab:CreateSlider({
+    name = "JumpPower",
+    range = {50, 150},
+    increment = 1,
+    suffix = " Power",
+    flag = "JumpPower",
+    default = 50,
+
+    callback = function(value)
+        JumpPower = value
+        applyMovement()
+    end
+})
+
+PlayerTab:CreateToggle({
+    name = "Infinite Jump",
+    flag = "InfiniteJump",
+    default = false,
+
+    callback = function(value)
+        InfiniteJump = value
+    end
+})
+
+PlayerTab:CreateButton({
+    name = "Reset Movement",
+
+    callback = function()
+        WalkSpeed = 16
+        JumpPower = 50
+
+        applyMovement()
+
+        Rayfield:Notify({
+            title = "TDAT K14",
+            content = "Movement đã reset.",
+            duration = 3
+        })
+    end
+})
+
+--==================================================
+-- ESP TAB
+--==================================================
+
+local ESPTab = Window:CreateTab({
+    name = "ESP"
+})
+
+ESPTab:CreateToggle({
+    name = "Player ESP",
+    flag = "PlayerESP",
+    default = false,
+
+    callback = function(value)
+        ESPEnabled = value
+
+        if ESPEnabled then
+            refreshESP()
+        else
+            clearESP()
+        end
+    end
+})
+
+ESPTab:CreateToggle({
+    name = "Show Name",
+    flag = "ShowName",
+    default = true,
+
+    callback = function(value)
+        ShowName = value
+    end
+})
+
+ESPTab:CreateToggle({
+    name = "Show Health",
+    flag = "ShowHealth",
+    default = true,
+
+    callback = function(value)
+        ShowHealth = value
+    end
+})
+
+ESPTab:CreateButton({
+    name = "Refresh ESP",
+
+    callback = function()
+        clearESP()
+
+        if ESPEnabled then
+            refreshESP()
+        end
+    end
+})
+
+--==================================================
+-- AIM TAB
+--==================================================
+
+local AimTab = Window:CreateTab({
+    name = "AIM"
+})
+
+AimTab:CreateDropdown({
+    name = "Target Part",
+    options = {
+        "Head",
+        "HumanoidRootPart",
+        "UpperTorso"
+    },
+    default = "Head",
+    flag = "TargetPart",
+
+    callback = function(value)
+        TargetPart = value
+    end
+})
+
+AimTab:CreateSlider({
+    name = "FOV",
+    range = {50, 500},
+    increment = 10,
+    suffix = " px",
+    flag = "FOV",
+    default = 150,
+
+    callback = function(value)
+        FOV = value
+    end
+})
+
+AimTab:CreateParagraph({
+    title = "Target Lock",
+    content = "Các thiết lập AIM ở đây dành cho hệ thống target/debug của game."
+})
+
+--==================================================
+-- GAME TAB
+--==================================================
+
+local GameTab = Window:CreateTab({
+    name = "GAME"
+})
+
+GameTab:CreateButton({
+    name = "Respawn",
+
+    callback = function()
+        local humanoid = getHumanoid()
+
+        if humanoid then
+            humanoid.Health = 0
+        end
+    end
+})
+
+GameTab:CreateButton({
+    name = "Refresh Character",
+
+    callback = function()
+        local character = getCharacter()
+
+        if character then
+            character:PivotTo(character:GetPivot())
+        end
+
+        task.wait(0.2)
+        applyMovement()
+    end
+})
+
+GameTab:CreateParagraph({
+    title = "Developer Tools",
+    content = "Các chức năng trong tab này dành cho kiểm thử game."
+})
+
+--==================================================
+-- INFO TAB
+--==================================================
+
+local InfoTab = Window:CreateTab({
+    name = "INFO"
+})
+
+local function getTime()
+    return os.date("%H:%M:%S")
+end
+
+InfoTab:CreateParagraph({
+    title = "TDAT K14 - VNG",
+    content =
+        "Username: " .. LocalPlayer.Name ..
+        "\nDisplay Name: " .. LocalPlayer.DisplayName ..
+        "\nUserId: " .. tostring(LocalPlayer.UserId) ..
+        "\nAccount Age: " .. tostring(LocalPlayer.AccountAge) .. " days"
+})
+
+InfoTab:CreateButton({
+    name = "Show Player Count",
+
+    callback = function()
+        local count = #Players:GetPlayers()
+
+        Rayfield:Notify({
+            title = "Player Count",
+            content = "Đang có " .. tostring(count) .. " người chơi.",
+            duration = 3
+        })
+    end
+})
+
+InfoTab:CreateButton({
+    name = "Show Time",
+
+    callback = function()
+        Rayfield:Notify({
+            title = "Current Time",
+            content = getTime(),
+            duration = 3
+        })
+    end
+})
+
+--==================================================
+-- INFINITE JUMP
+--==================================================
+
+UserInputService.JumpRequest:Connect(function()
+    if not InfiniteJump then
+        return
+    end
+
+    local humanoid = getHumanoid()
+
+    if humanoid then
+        humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+    end
+end)
+
+--==================================================
+-- CHARACTER RESPAWN
+--==================================================
+
+LocalPlayer.CharacterAdded:Connect(function()
+    task.wait(0.5)
+
+    applyMovement()
+
+    if ESPEnabled then
+        refreshESP()
+    end
+end)
+
+--==================================================
+-- MOVEMENT LOOP
+--==================================================
+
+RunService.Heartbeat:Connect(function()
+    local humanoid = getHumanoid()
+
+    if humanoid then
+        if humanoid.WalkSpeed ~= WalkSpeed then
+            humanoid.WalkSpeed = WalkSpeed
+        end
+
+        if humanoid.JumpPower ~= JumpPower then
+            humanoid.JumpPower = JumpPower
+        end
+    end
+end)
+
+--==================================================
+-- START
+--==================================================
+
+applyMovement()
+
+Rayfield:Notify({
+    title = "TDAT K14 - VNG",
+    content = "Menu Rayfield đã khởi động.",
+    duration = 5
+})
